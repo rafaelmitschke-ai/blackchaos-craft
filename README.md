@@ -1,7 +1,7 @@
 # BlackChaos Craft
 
 Ein Voxel-Kriegsspiel im Minecraft-Stil — komplett im Browser, eine einzige HTML-Datei.
-Baue, kämpfe und überlebe Wellen von Gegnern mit **Panzern, Flugzeugen und Helikoptern**.
+Riesige Welt, **6 steuerbare Fahrzeuge** (Panzer, Jeep, Flugzeug, Helikopter, Kanonenboot, U-Boot), zwei Spielmodi.
 
 ## ▶ Jetzt spielen
 
@@ -9,14 +9,18 @@ Baue, kämpfe und überlebe Wellen von Gegnern mit **Panzern, Flugzeugen und Hel
 
 (Wird über GitHub Pages bereitgestellt — nach einem Push kann der Link ein paar Minuten brauchen, bis er aktiv ist. Funktioniert am besten in Chrome oder Edge am Desktop; Touch-Steuerung für Handy/Tablet ist eingebaut.)
 
-## Spielprinzip
+## Spielmodi
 
-Überlebe immer härtere **Gegner-Wellen**. Jeder Abschuss und jeder abgebaute Block bringt **Kristalle ◆**. Im Crafting-Menü baust du davon deine Armee auf: Panzer, Flugzeuge, Helikopter, automatische Geschütztürme — oder heilst dich und erhöhst deine maximale Gesundheit. Stirbst du, ist die Runde vorbei und dein Score zählt.
+| Modus | Beschreibung |
+|---|---|
+| ⚔ **Kriegsmodus** | Überlebe endlose **Gegner-Wellen**. Abschüsse und Abbauen bringen **Kristalle ◆** fürs Crafting. Game Over zählt deinen Score & Highscore. |
+| 🏗 **Kreativmodus** | Freies Bauen ohne Gegner und ohne Schaden. Alle Fahrzeuge und Craftings **kostenlos** (Tasten T/P/H/J/B/U). |
 
 ## Nutzung
 
 ### Variante 1 — direkt im Browser (am einfachsten)
-Den Live-Link oben öffnen, auf **„Klicken zum Starten"** klicken (aktiviert Maussteuerung + Sound) und loslegen.
+Den Live-Link oben öffnen, **Spielmodus anklicken** (aktiviert Maussteuerung + Sound) und loslegen.
+Deine Fahrzeuge stehen direkt am Spawn — erkennbar am **lila Marker ▼** über jedem Fahrzeug.
 
 ### Variante 2 — lokal aus dem Repo
 ```bash
@@ -32,16 +36,16 @@ python -m http.server 8000
 
 ## Features
 
-- **Kriegs-Überlebensmodus** — Gegner-KI (Panzer & Flugzeuge), endlose Wellen, steigende Schwierigkeit, Lebensanzeige, Score & Highscore
-- **Kristall-Wirtschaft & Crafting** — Kristalle durch Abbauen und Abschüsse; Fahrzeuge, Geschütztürme, Heilung und HP-Upgrades bauen
-- **Drei Fahrzeuge** — fahrbarer **Panzer** (Kanone), **Flugzeug** (MG + Bomben), **Helikopter** (schwebt frei)
-- **Auto-Geschütztürme** — craftbare Türme, die selbstständig auf Gegner feuern
-- **Bauen wie in Minecraft** — 9 Blocktypen abbauen/setzen, Hotbar (1–9 / Mausrad)
-- **Prozedurale Welt** (96×96) mit Hügeln, Seen, Stränden, Bäumen und umherstreifenden Kreaturen
-- **Sound & Musik** — prozedurale Effekte (Schüsse, Explosionen, Motoren) und düsterer Soundtrack
-- **Tag/Nacht-Zyklus** — wandernde Chaos-Sonne, Mond und Sterne; dynamisches Licht
-- **Effekte** — Explosionen mit Terrain-Zerstörung, Mündungsfeuer, Screen-Shake, Schadens-Vignette
-- **Speichern & Laden** — Welt und Fortschritt im Browser (localStorage), inkl. Autosave
+- **Riesenwelt** — 432×432 Blöcke (20× Fläche), prozedural: Hügel, Seen, Strände, Schneeberge, Wälder, Erz-Adern im Untergrund
+- **6 Fahrzeuge** — **Panzer** (Kanone), **Jeep** (schnell, MG), **Flugzeug** (MG + Bomben), **Helikopter** (schwebt frei), **Kanonenboot** (Wasser), **U-Boot** (taucht, Torpedos) — alle mit lila Marker ▼, werden mitgespeichert
+- **Kriegs-Überlebensmodus** — Gegner-KI, endlose Wellen, steigende Schwierigkeit, Score & Highscore — **als eigene Option** neben dem Kreativmodus
+- **Großes Crafting-System** — 12 Rezepte: alle 6 Fahrzeuge, Auto-Geschütztürme, Heilung, Max-HP, Blaster-Upgrades (3 Stufen), Raketenwerfer, Jetpack
+- **15 platzierbare Blocktypen** — u. a. Glas, **TNT (Kettenreaktion!)**, Lampe (leuchtet nachts), Obsidian (explosionsfest), Schnee, Eis, Chaos-Block
+- **Erz-Wirtschaft** — Kohle (◆3), Eisen (◆6), Gold (◆12), Diamant (◆25) beim Abbau; selbst gesetzte Blöcke geben nichts (kein Farmen)
+- **Sound & Musik** — prozedurale Effekte (Schüsse, Explosionen, Motoren, Torpedos) und düsterer Soundtrack, ganz ohne Audiodateien
+- **Tag/Nacht-Zyklus** — Chaos-Sonne, Mond, Sterne, dynamisches Licht
+- **Effekte** — Terrain-Zerstörung, Screen-Shake, Schadens-Vignette, Mündungsfeuer
+- **Speichern & Laden** — Welt (RLE-komprimiert), Fortschritt, Fahrzeuge und Türme im Browser; Autosave jede Minute
 - **Touch-Steuerung** — virtueller Joystick + Buttons auf Mobilgeräten
 
 ## Steuerung
@@ -49,26 +53,30 @@ python -m http.server 8000
 | Taste | Aktion |
 |---|---|
 | WASD | Bewegen |
-| Leertaste | Springen |
+| Leertaste | Springen (mit Jetpack: fliegen) |
 | Shift | Sprinten |
 | Maus | Umsehen |
 | Linksklick | Block abbauen / feuern |
 | Rechtsklick | Block setzen |
-| F | Zu Fuß: Blaster abfeuern |
-| 1–9 / Mausrad | Block auswählen |
-| E | Fahrzeug ein-/aussteigen (nächstes entern) |
+| F / R | Blaster / Rakete (craftbar) |
+| 1–9 / Mausrad | Block auswählen (15 Typen) |
+| E | Fahrzeug ein-/aussteigen |
 | C | Crafting-Menü |
-| T / P / H | Panzer / Flugzeug / Helikopter spawnen |
+| T / P / H / J / B / U | Panzer / Flugzeug / Heli / Jeep / Boot / U-Boot (nur Kreativmodus) |
 | K / L | Spiel speichern / laden |
 | M / N | Musik / Sound an-aus |
 
-**Panzer:** W/S fahren · A/D lenken · Leertaste oder Klick = Kanone
+**Panzer:** W/S fahren · A/D lenken · Klick = Kanone
+**Jeep:** wie Panzer, aber schnell · Klick = MG
 **Flugzeug:** W/S Gas · Maus = nicken/gieren · A/D = gieren · Klick = MG · Leertaste = Bombe
 **Helikopter:** Leertaste/Shift = hoch/runter · W/S = vor/zurück · A/D = drehen · Klick = MG
+**Kanonenboot:** W/S · A/D · Klick = Kanone (nur auf Wasser)
+**U-Boot:** W/S · A/D · Leertaste/Shift = auf-/abtauchen · Klick = Torpedo
 
 ## Technik
 
 - Einzelne `index.html`, kein Build-Schritt, keine Abhängigkeiten außer Three.js (CDN)
 - [Three.js](https://threejs.org/) r149 für das WebGL-Rendering
-- Eigene Voxel-Engine: Chunk-Meshing, prozedurales Terrain (fBm-Noise), Fahrzeug- und Projektilphysik, Gegner-KI
+- Eigene Voxel-Engine: Chunk-Meshing (729 Chunks), prozedurales Terrain (fBm-Noise), Erz-Generierung, Fahrzeug- und Projektilphysik, Gegner-KI, TNT-Kettenreaktionen
+- Speicherstände RLE-komprimiert (9 MB Weltdaten → unter 1 MB im localStorage)
 - Prozeduraler Sound über die Web Audio API (keine Audiodateien nötig)
