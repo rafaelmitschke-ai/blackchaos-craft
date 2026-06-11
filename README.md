@@ -36,7 +36,10 @@ python -m http.server 8000
 
 ## Features
 
-- **Riesenwelt** — 432×432 Blöcke (20× Fläche), prozedural: Hügel, Seen, Strände, Schneeberge, Wälder, Erz-Adern im Untergrund
+- **Riesenwelt** — 432×432 Blöcke (20× Fläche), prozedural: Hügel, Seen, Strände, Schneeberge, **Wüsten**, Wälder, Erz-Adern und **Höhlensysteme** im Untergrund
+- **Erkundung lohnt sich** — ~70 Ruinen & Häuser mit **Schatztruhen** (20–60 Kristalle, 15 % Jackpot mit Vollheilung); nachts erwachen im Kriegsmodus **Chaos-Schleicher**
+- **Minimap** — Gelände, Fahrzeuge (lila), Gegner (rot), Schleicher (pink), Türme und dein Blickwinkel-Pfeil; oben rechts
+- **Chunk-Streaming** — nur die Welt um dich herum wird geladen: Start in ~1 Sekunde, flüssige FPS auch auf schwächeren PCs; **Sichtweite einstellbar** (Startbildschirm: 4–10 Chunks, dazu Maus-Empfindlichkeit)
 - **6 Fahrzeuge** — **Panzer** (Kanone), **Jeep** (schnell, MG), **Flugzeug** (MG + Bomben), **Helikopter** (schwebt frei), **Kanonenboot** (Wasser), **U-Boot** (taucht, Torpedos) — alle mit lila Marker ▼, werden mitgespeichert
 - **Kriegs-Überlebensmodus** — Gegner-KI, endlose Wellen, steigende Schwierigkeit, Score & Highscore — **als eigene Option** neben dem Kreativmodus
 - **Großes Crafting-System** — 12 Rezepte: alle 6 Fahrzeuge, Auto-Geschütztürme, Heilung, Max-HP, Blaster-Upgrades (3 Stufen), Raketenwerfer, Jetpack

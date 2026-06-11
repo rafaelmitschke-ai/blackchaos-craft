@@ -53,6 +53,10 @@
   .recipe.dis{opacity:.4;cursor:not-allowed;}
   .recipe.owned{border-color:#3a9d5c;}
   .ok{color:#7CFFA0;}.no{color:#ff7a8a;}.free{color:#7CFFA0;}
+  #minimap{position:fixed;top:10px;right:10px;z-index:8;border:2px solid #5a4d7a;border-radius:8px;
+    background:#0c0816;opacity:.92;pointer-events:none;display:none;}
+  #optbox{margin-top:12px;}
+  #optbox input[type=range]{width:130px;accent-color:#a64dff;vertical-align:middle;}
   #touch{position:fixed;inset:0;z-index:15;display:none;pointer-events:none;}
   #stick{position:absolute;left:24px;bottom:24px;width:120px;height:120px;border-radius:50%;
     background:rgba(40,24,70,.4);border:2px solid #5a4d7a;pointer-events:auto;}
@@ -83,8 +87,13 @@
     <b>C</b><span>Crafting · <b>K/L</b> Speichern/Laden · <b>M/N</b> Musik/Sound</span>
     <b>Kreativ-Tasten</b><span>T Panzer · P Flugzeug · H Heli · J Jeep · B Boot · U U-Boot</span>
   </div>
+  <div class="ctl" id="optbox" style="display:none">
+    <b>Sichtweite</b><span><input type="range" id="optVd" min="4" max="10" step="1"> <span id="optVdV"></span> Chunks</span>
+    <b>Maus-Tempo</b><span><input type="range" id="optSens" min="0.4" max="2" step="0.1"> <span id="optSensV"></span>×</span>
+  </div>
   <div class="sub" id="loadhint"></div>
 </div>
+<canvas id="minimap" width="160" height="160"></canvas>
 
 <div id="hud">
   <div class="title">BLACKCHAOS CRAFT</div>
@@ -143,10 +152,11 @@ function genWorld(){
   blocks.fill(0);
   for(let x=0;x<W;x++)for(let z=0;z<W;z++){
     const h=clamp(Math.floor(7+fbm(x,z)*22),3,H-12);
+    const desert=smooth(x/90+7.3,z/90+7.3)>0.62; // Wüsten-Biom
     for(let y=0;y<=h;y++){
       let t=3;
-      if(y===h)t=h<=WATER+1?6:(h>=26?15:1); // Schnee auf Bergen
-      else if(y>h-3)t=2;
+      if(y===h)t=h<=WATER+1?6:(h>=26?15:(desert?6:1)); // Schnee auf Bergen, Sand in der Wüste
+      else if(y>h-3)t=desert?6:2;
       blocks[I(x,y,z)]=t;
     }
     blocks[I(x,0,z)]=21; // Fels (unzerstörbar)
@@ -187,6 +197,60 @@ function genWorld(){
       if(inB(ox,oy,oz)&&blocks[I(ox,oy,oz)]===3)blocks[I(ox,oy,oz)]=t;
     }
   }
+  // Höhlen (Random-Walk-Tunnel im Untergrund)
+  for(let i=0;i<240;i++){
+    let x=8+Math.random()*(W-16),y=4+Math.random()*9,z=8+Math.random()*(W-16);
+    let ang=Math.random()*6.28,vy=(Math.random()-0.5)*0.4;
+    const len=30+Math.random()*50;
+    for(let s=0;s<len;s++){
+      ang+=(Math.random()-0.5)*0.5;
+      vy=clamp(vy+(Math.random()-0.5)*0.2,-0.5,0.5);
+      x+=Math.cos(ang)*1.6;z+=Math.sin(ang)*1.6;y=clamp(y+vy,2,16);
+      const r=1.6+Math.random()*1.2;
+      for(let bx=Math.floor(x-r);bx<=x+r;bx++)
+      for(let by=Math.max(1,Math.floor(y-r));by<=y+r;by++)
+      for(let bz=Math.floor(z-r);bz<=z+r;bz++){
+        if(!inB(bx,by,bz))continue;
+        const t=blocks[I(bx,by,bz)];
+        if(t===7||t===21)continue;
+        const dx=bx+0.5-x,dy=by+0.5-y,dz=bz+0.5-z;
+        if(dx*dx+dy*dy+dz*dz<=r*r)blocks[I(bx,by,bz)]=0;
+      }
+    }
+  }
+  // Ruinen & Häuser mit Schatztruhen
+  for(let i=0;i<70;i++){
+    const x=12+Math.floor(Math.random()*(W-28)),z=12+Math.floor(Math.random()*(W-28));
+    if(Math.abs(x-W/2)<26&&Math.abs(z-W/2)<26)continue; // Spawn frei halten
+    const gy=groundH(x,z);
+    if(gy<=WATER+1||gy>24)continue;
+    const under=getB(x,gy-1,z);
+    if(under===4||under===5)continue; // nicht auf Baumkronen bauen
+    const ruin=Math.random()<0.5;
+    for(let dx=0;dx<5;dx++)for(let dz=0;dz<5;dz++){
+      const edge=dx===0||dz===0||dx===4||dz===4;
+      setB(x+dx,gy-1,z+dz,8); // Bretterboden
+      for(let dy=0;dy<5;dy++){
+        const yy=gy+dy;
+        if(edge){
+          if(ruin){
+            const hgt=Math.floor(rnd2(x+dx,z*3+dz)*3);
+            if(dy<hgt)setB(x+dx,yy,z+dz,14);else setB(x+dx,yy,z+dz,0);
+          }else{
+            if(dy<3){if(dx===2&&dz===0&&dy<2)setB(x+dx,yy,z+dz,0);else setB(x+dx,yy,z+dz,9);}
+            else if(dy===3)setB(x+dx,yy,z+dz,8);
+            else setB(x+dx,yy,z+dz,0);
+          }
+        }else{
+          if(!ruin&&dy===3)setB(x+dx,yy,z+dz,8);
+          else setB(x+dx,yy,z+dz,0);
+        }
+      }
+    }
+    setB(x+2,gy,z+2,22); // Schatztruhe
+    if(ruin&&Math.random()<0.5)setB(x+1,gy,z+3,22);
+    if(!ruin)setB(x+2,gy+4,z+2,13); // Lampe auf dem Dach
+  }
 }
 function clearSpawnArea(){
   const cx=W/2,cz=W/2,r=16;
@@ -216,6 +280,7 @@ const PAL={
   19:{all:[.75,.63,.25],name:'Golderz',css:'#bfa040'},
   20:{all:[.45,.75,.78],name:'Diamanterz',css:'#73bfc7'},
   21:{all:[.20,.20,.23],name:'Fels',css:'#33333a'},
+  22:{all:[.55,.38,.12],name:'Kiste',css:'#8c611f'},
 };
 const HOT=[1,2,3,4,5,6,8,9,10,11,12,13,14,15,16];
 const ORE_VALUE={17:3,18:6,19:12,20:25};
@@ -335,14 +400,52 @@ function rebuildAround(x,z){
     const cx=Math.floor((x+ox)/CH),cz=Math.floor((z+oz)/CH);
     if(cx>=0&&cx<NC&&cz>=0&&cz<NC)set.add(cx+'_'+cz);
   }
-  for(const k of set){const[a,b]=k.split('_').map(Number);buildChunk(a,b);}
+  for(const k of set){if(!chunks[k])continue;const[a,b]=k.split('_').map(Number);buildChunk(a,b);}
 }
 function rebuildRegion(cx,cz,r){
   const c0x=clamp(Math.floor((cx-r)/CH),0,NC-1),c1x=clamp(Math.floor((cx+r)/CH),0,NC-1);
   const c0z=clamp(Math.floor((cz-r)/CH),0,NC-1),c1z=clamp(Math.floor((cz+r)/CH),0,NC-1);
-  for(let a=c0x;a<=c1x;a++)for(let b=c0z;b<=c1z;b++)buildChunk(a,b);
+  for(let a=c0x;a<=c1x;a++)for(let b=c0z;b<=c1z;b++)if(chunks[a+'_'+b])buildChunk(a,b);
 }
-function rebuildAll(){for(let cx=0;cx<NC;cx++)for(let cz=0;cz<NC;cz++)buildChunk(cx,cz);}
+// --- Chunk-Streaming: nur die Welt um den Spieler wird gebaut ---
+function unloadChunk(key){
+  const arr=chunks[key];if(!arr)return;
+  for(const m of arr){scene.remove(m);m.geometry.dispose();}
+  delete chunks[key];
+}
+function unloadAllChunks(){for(const k of Object.keys(chunks))unloadChunk(k);}
+function buildAround(px,pz,r){
+  const pcx=clamp(Math.floor(px/CH),0,NC-1),pcz=clamp(Math.floor(pz/CH),0,NC-1);
+  for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){
+    const cx=pcx+dx,cz=pcz+dz;
+    if(cx<0||cx>=NC||cz<0||cz>=NC||chunks[cx+'_'+cz])continue;
+    buildChunk(cx,cz);
+  }
+}
+let buildQueue=[],streamTick=0;
+function updateStreaming(){
+  const pcx=clamp(Math.floor(player.pos.x/CH),0,NC-1),pcz=clamp(Math.floor(player.pos.z/CH),0,NC-1);
+  const R=opts.viewDist;
+  if(--streamTick<=0){
+    streamTick=20;
+    buildQueue=[];
+    for(let dx=-R;dx<=R;dx++)for(let dz=-R;dz<=R;dz++){
+      const cx=pcx+dx,cz=pcz+dz;
+      if(cx<0||cx>=NC||cz<0||cz>=NC||chunks[cx+'_'+cz])continue;
+      buildQueue.push({cx,cz,d:dx*dx+dz*dz});
+    }
+    buildQueue.sort((a,b)=>a.d-b.d);
+    for(const k of Object.keys(chunks)){
+      const[a,b]=k.split('_').map(Number);
+      if(Math.max(Math.abs(a-pcx),Math.abs(b-pcz))>R+2)unloadChunk(k);
+    }
+  }
+  let n=0;
+  while(buildQueue.length&&n<2){
+    const c=buildQueue.shift();
+    if(!chunks[c.cx+'_'+c.cz]){buildChunk(c.cx,c.cz);n++;}
+  }
+}
 function groundH(x,z){
   const bx=clamp(Math.floor(x),0,W-1),bz=clamp(Math.floor(z),0,W-1);
   for(let y=H-1;y>=0;y--)if(isSolid(blocks[I(bx,y,bz)]))return y+1;
@@ -498,7 +601,18 @@ const player={pos:new THREE.Vector3(SPAWN+.5,0,SPAWN+.5),vel:new THREE.Vector3()
   onGround:false,hp:100,maxhp:100,crystals:0,score:0,fireCd:0,rocketCd:0,hurtCd:0,
   gunLvl:0,hasRocket:false,hasJetpack:false};
 const state={vehicle:null,wave:0,betweenWaves:0,running:false,started:false,over:false,best:0,mode:'war'};
-let locked=false,mouseHeld=false,isTouch=false,shake=0,dayTime=0.25;
+let locked=false,mouseHeld=false,isTouch=false,shake=0,dayTime=0.25,isNight=false;
+
+// Einstellungen (persistent)
+const opts={viewDist:6,sens:1};
+try{Object.assign(opts,JSON.parse(localStorage.getItem('bcc_opts')||'{}'));}catch(e){}
+function applyOpts(){
+  const f=opts.viewDist*CH;
+  scene.fog.near=Math.max(40,f*0.55);
+  scene.fog.far=f*1.05;
+  try{localStorage.setItem('bcc_opts',JSON.stringify(opts));}catch(e){}
+}
+applyOpts();
 
 // ======================================================= SPIELER-PHYSIK
 function moveAxis(axis,delta){
@@ -562,6 +676,13 @@ function breakBlock(){
   setB(bx,by,bz,0);rebuildAround(bx,bz);SFX.dig();
   const key=I(bx,by,bz);
   if(placedSet.has(key)){placedSet.delete(key);return;} // selbst gesetzt: kein Profit
+  if(t===22){ // Schatztruhe!
+    const loot=20+Math.floor(Math.random()*41);
+    player.crystals+=loot;player.score+=50;SFX.pickup();
+    if(Math.random()<0.15){player.hp=player.maxhp;banner('SCHATZ! ◆'+loot+' + VOLL GEHEILT');}
+    else banner('SCHATZTRUHE: ◆'+loot);
+    return;
+  }
   const gain=ORE_VALUE[t]||1;
   player.crystals+=gain;
   if(ORE_VALUE[t]){SFX.pickup();player.score+=gain;}
@@ -846,6 +967,46 @@ function updateCritters(dt){
   }
 }
 
+// ======================================================= NACHT-SCHLEICHER (nur Kriegsmodus)
+const mobs=[];
+let nightAnnounced=false;
+function mobMesh(){
+  const g=new THREE.Group();
+  box(g,0.7,1.0,0.4,0x1d1430,0,1.0,0);
+  box(g,0.5,0.5,0.5,0x2a1d44,0,1.8,0);
+  for(const px of[-0.12,0.12]){
+    const e=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.06),new THREE.MeshBasicMaterial({color:0xff44ff}));
+    e.position.set(px,1.85,0.27);g.add(e);
+  }
+  box(g,0.22,0.5,0.22,0x14101f,-0.18,0.25,0);
+  box(g,0.22,0.5,0.22,0x14101f,0.18,0.25,0);
+  return g;
+}
+function spawnMob(){
+  if(mobs.length>=8)return;
+  const ang=Math.random()*6.28,d=24+Math.random()*18;
+  const x=clamp(player.pos.x+Math.cos(ang)*d,4,W-4),z=clamp(player.pos.z+Math.sin(ang)*d,4,W-4);
+  const m={group:mobMesh(),pos:new THREE.Vector3(x,groundH(x,z),z),hp:20,cd:0};
+  m.group.position.copy(m.pos);scene.add(m.group);mobs.push(m);
+}
+function killMob(i,reward){
+  scene.remove(mobs[i].group);mobs.splice(i,1);
+  if(reward){player.crystals+=5;player.score+=40;SFX.pickup();}
+}
+function updateMobs(dt){
+  for(let i=mobs.length-1;i>=0;i--){
+    const m=mobs[i];
+    if(!isNight||dist2(m.pos,player.pos)>90*90){killMob(i,false);continue;}
+    const dx=player.pos.x-m.pos.x,dz=player.pos.z-m.pos.z,d=Math.hypot(dx,dz)||1;
+    const nx=clamp(m.pos.x+dx/d*3.4*dt,2,W-2),nz=clamp(m.pos.z+dz/d*3.4*dt,2,W-2);
+    if(groundH(nx,nz)-m.pos.y<=1.3){m.pos.x=nx;m.pos.z=nz;}
+    m.pos.y+=(groundH(m.pos.x,m.pos.z)-m.pos.y)*Math.min(1,10*dt);
+    m.cd-=dt;
+    if(d<1.8&&m.cd<=0&&!state.vehicle){m.cd=1.0;damagePlayer(8);}
+    m.group.position.copy(m.pos);m.group.rotation.y=Math.atan2(dx,dz);
+  }
+}
+
 // ======================================================= PROJEKTILE / TNT / EXPLOSIONEN
 const projs=[],effects=[],tntQueue=[];
 const projGeo=new THREE.SphereGeometry(0.18,8,8);
@@ -878,6 +1039,9 @@ function updateProjs(dt){
       if(p.owner==='player'){
         for(let k=enemies.length-1;k>=0;k--){
           if(dist2(m,enemies[k].pos)<2.6){enemies[k].hp-=p.dmg;SFX.hit();if(enemies[k].hp<=0)killEnemy(k);done=true;break;}
+        }
+        if(!done)for(let k=mobs.length-1;k>=0;k--){
+          if(dist2(m,mobs[k].pos)<2.4){mobs[k].hp-=p.dmg;SFX.hit();if(mobs[k].hp<=0)killMob(k,true);done=true;break;}
         }
         if(!done)for(let k=critters.length-1;k>=0;k--){
           if(dist2(m,critters[k].pos)<2.0){critters[k].hp-=p.dmg;
@@ -935,6 +1099,9 @@ function explode(c,r,owner){
     for(let k=enemies.length-1;k>=0;k--){
       const d=Math.sqrt(dist2(enemies[k].pos,c));
       if(d<=r+1.6){enemies[k].hp-=(r+2-d)*18;if(enemies[k].hp<=0)killEnemy(k);}
+    }
+    for(let k=mobs.length-1;k>=0;k--){
+      if(Math.sqrt(dist2(mobs[k].pos,c))<=r+1.4)killMob(k,true);
     }
   }
   if(owner!=='player'){
@@ -1046,8 +1213,9 @@ document.addEventListener('pointerlockchange',()=>{
 document.addEventListener('mousemove',e=>{
   if(!locked)return;
   const v=state.vehicle;
-  if(v&&v.type==='plane'){v.yaw-=e.movementX*0.0017;v.rx=clamp(v.rx+e.movementY*0.0017,-1.05,1.05);v.bank=clamp(v.bank-e.movementX*0.004,-0.9,0.9);}
-  else if(!v){player.yaw-=e.movementX*0.0022;player.pitch=clamp(player.pitch-e.movementY*0.0022,-1.55,1.55);}
+  const s=opts.sens;
+  if(v&&v.type==='plane'){v.yaw-=e.movementX*0.0017*s;v.rx=clamp(v.rx+e.movementY*0.0017*s,-1.05,1.05);v.bank=clamp(v.bank-e.movementX*0.004*s,-0.9,0.9);}
+  else if(!v){player.yaw-=e.movementX*0.0022*s;player.pitch=clamp(player.pitch-e.movementY*0.0022*s,-1.55,1.55);}
 });
 addEventListener('mousedown',e=>{
   if(!locked)return;mouseHeld=true;
@@ -1084,6 +1252,7 @@ function startGame(mode){
     spawnStarterFleet();
     if(mode==='war')startWave(1);
     banner(mode==='war'?'⚔ KRIEGSMODUS':'🏗 KREATIVMODUS');
+    mmEl.style.display='block';mmTerrain();
   }
   if(isTouch){locked=true;overlay.style.display='none';}
   else renderer.domElement.requestPointerLock();
@@ -1187,8 +1356,9 @@ function loadGame(){
     const raw=localStorage.getItem('bcc_save');if(!raw){banner('KEIN SPEICHERSTAND');return;}
     const data=JSON.parse(raw);
     rleDecode(b64dec(data.blocks),blocks);
-    rebuildAll();placedSet.clear();
+    unloadAllChunks();placedSet.clear();
     player.pos.set(data.p.x,data.p.y,data.p.z);
+    buildAround(player.pos.x,player.pos.z,3);streamTick=0;
     player.hp=data.p.hp;player.maxhp=data.p.maxhp;player.crystals=data.p.cry;player.score=data.p.score;
     player.gunLvl=data.p.gun||0;player.hasRocket=!!data.p.rocket;player.hasJetpack=!!data.p.jet;
     dayTime=data.time||0.25;state.mode=data.mode||'war';
@@ -1204,6 +1374,55 @@ function loadGame(){
   }catch(e){banner('LADEN FEHLGESCHLAGEN');}
 }
 function hasSave(){try{return!!localStorage.getItem('bcc_save');}catch(e){return false;}}
+
+// ======================================================= MINIMAP
+const mmEl=document.getElementById('minimap'),mmx=mmEl.getContext('2d');
+const mmT=document.createElement('canvas');mmT.width=160;mmT.height=160;
+const mmtx=mmT.getContext('2d');
+const MM_RGB={0:[10,8,20],7:[47,95,200]};
+for(const k in PAL){const c=PAL[k].top||PAL[k].all;MM_RGB[k]=[c[0]*255|0,c[1]*255|0,c[2]*255|0];}
+let mmOrigin={ox:0,oz:0},mmTimer=0;
+function mmTerrain(){
+  mmOrigin={ox:Math.floor(player.pos.x)-80,oz:Math.floor(player.pos.z)-80};
+  const img=mmtx.createImageData(160,160);
+  let p=0;
+  for(let pz=0;pz<160;pz++)for(let px=0;px<160;px++){
+    const x=mmOrigin.ox+px,z=mmOrigin.oz+pz;
+    let c=MM_RGB[0];
+    if(x>=0&&x<W&&z>=0&&z<W){
+      for(let y=H-1;y>=0;y--){const t=blocks[I(x,y,z)];if(t){c=MM_RGB[t]||c;break;}}
+    }
+    img.data[p++]=c[0];img.data[p++]=c[1];img.data[p++]=c[2];img.data[p++]=255;
+  }
+  mmtx.putImageData(img,0,0);
+}
+function mmDot(wx,wz,col,s){
+  const px=clamp(wx-mmOrigin.ox,3,157),pz=clamp(wz-mmOrigin.oz,3,157);
+  mmx.fillStyle=col;mmx.fillRect(px-s/2,pz-s/2,s,s);
+}
+function mmDraw(){
+  mmx.drawImage(mmT,0,0);
+  for(const t of turrets)mmDot(t.pos.x,t.pos.z,'#8a6cff',3);
+  for(const v of vehicles)mmDot(v.pos.x,v.pos.z,'#c060ff',4);
+  for(const e of enemies)mmDot(e.pos.x,e.pos.z,'#ff4455',4);
+  for(const m of mobs)mmDot(m.pos.x,m.pos.z,'#ff44ff',3);
+  // Spieler-Pfeil
+  const px=clamp(player.pos.x-mmOrigin.ox,4,156),pz=clamp(player.pos.z-mmOrigin.oz,4,156);
+  mmx.save();mmx.translate(px,pz);mmx.rotate(-player.yaw);
+  mmx.fillStyle='#ffffff';
+  mmx.beginPath();mmx.moveTo(0,-6);mmx.lineTo(4,4);mmx.lineTo(-4,4);mmx.closePath();mmx.fill();
+  mmx.restore();
+}
+
+// Einstellungs-Slider verkabeln
+{
+  const vd=document.getElementById('optVd'),sv=document.getElementById('optSens');
+  const vdV=document.getElementById('optVdV'),svV=document.getElementById('optSensV');
+  vd.value=opts.viewDist;sv.value=opts.sens;
+  vdV.textContent=opts.viewDist;svV.textContent=opts.sens.toFixed(1);
+  vd.addEventListener('input',()=>{opts.viewDist=+vd.value;vdV.textContent=vd.value;applyOpts();streamTick=0;});
+  sv.addEventListener('input',()=>{opts.sens=+sv.value;svV.textContent=(+sv.value).toFixed(1);applyOpts();});
+}
 
 // ======================================================= HUD
 const hotbarEl=document.getElementById('hotbar');
@@ -1260,6 +1479,7 @@ function updateDayNight(dt){
   scene.background.copy(bg);scene.fog.color.copy(bg);
   sun.visible=sy>-0.1;moon.visible=sy<0.1;
   stars.material.opacity=clamp(1-day*1.3,0,1);
+  isNight=sy<-0.05;
 }
 
 // ======================================================= TOUCH
@@ -1310,22 +1530,25 @@ function setupTouch(){
 refreshHotbar();setupTouch();
 try{state.best=+localStorage.getItem('bcc_best')||0;}catch(e){}
 setTimeout(()=>{
-  genWorld();clearSpawnArea();rebuildAll();
+  genWorld();clearSpawnArea();
+  buildAround(player.pos.x,player.pos.z,3); // nur Start-Umgebung sofort, Rest streamt
   player.pos.y=groundH(player.pos.x,player.pos.z)+0.2;
   for(let i=0;i<6;i++)spawnCritter();
   document.getElementById('genmsg').style.display='none';
   document.getElementById('modes').style.display='flex';
   document.getElementById('ctlbox').style.display='grid';
+  document.getElementById('optbox').style.display='grid';
   document.getElementById('loadhint').textContent=hasSave()?'Gespeicherter Stand vorhanden — im Spiel mit [L] laden':'';
   animate();
 },60);
 
-let critterTimer=8,markerPhase=0;
+let critterTimer=8,markerPhase=0,mobTimer=0;
 const clock=new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
   const dt=Math.min(clock.getDelta(),0.05);
   updateDayNight(dt);
+  updateStreaming();
   markerPhase+=dt*3;
   for(const v of vehicles)if(v.marker){v.marker.position.y=4.4+Math.sin(markerPhase)*0.3;v.marker.visible=state.vehicle!==v;}
   if(locked&&state.running&&!state.over&&craftEl.style.display!=='flex'){
@@ -1333,9 +1556,19 @@ function animate(){
     if(v){VEHICLE_UPDATERS[v.type](v,dt);player.pos.copy(v.pos);vehicleCam(v,dt);}
     else updatePlayer(dt);
     for(const e of enemies)updateEnemy(e,dt);
-    updateTurrets(dt);updateCritters(dt);updateWaves(dt);updateTNT(dt);
+    updateTurrets(dt);updateCritters(dt);updateWaves(dt);updateTNT(dt);updateMobs(dt);
+    if(state.mode==='war'&&isNight){
+      mobTimer-=dt;
+      if(mobTimer<=0){mobTimer=4;spawnMob();
+        if(!nightAnnounced){nightAnnounced=true;banner('NACHT — SCHLEICHER ERWACHEN');}}
+    }else if(!isNight)nightAnnounced=false;
     player.fireCd-=dt;player.rocketCd-=dt;
     critterTimer-=dt;if(critterTimer<=0){critterTimer=12;spawnCritter();}
+  }
+  if(state.started){
+    mmTimer-=dt;
+    if(mmTimer<=0){mmTimer=2;mmTerrain();}
+    mmDraw();
   }
   updateProjs(dt);updateEffects(dt);
   if(shake>0){shake=Math.max(0,shake-dt*2.5);
